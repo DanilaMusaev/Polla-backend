@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Модели данных
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  polls     Poll[]
+}
+
+model Poll {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  responses   Response[]
+  resultsId   String   @unique @default(uuid()) // Отдельный уникальный ID для результатов
+}
+
+model Question {
+  id          String   @id @default(uuid())
+  text        String
+  type        QuestionType // Важное поле: тип вопроса
+  order       Int      // Для порядка вопросов
+  options     Json?    // Для хранения вариантов ответа (текст, картинки)
+  pollId      String
+  poll        Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+}
+
+model Response {
+  id           String   @id @default(uuid())
+  respondent   String?  // Имя того, кто прошел опрос (может быть null для анонима)
+  submittedAt  DateTime @default(now())
+  pollId       String
+  poll         Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  answers      Answer[]
+}
+
+model Answer {
+  id          String   @id @default(uuid())
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  responseId  String
+  response    Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  // Ответ может быть разным в зависимости от типа вопроса, поэтому храним в JSON
+  content     Json     // Может быть строкой (для текста), массивом строк (для множественного выбора) и т.д.
+}
+
+enum QuestionType {
+  TEXT       // Открытый вопрос, поле ввода
+  SINGLE_CHOICE // Один вариант из списка (текст)
+  MULTIPLE_CHOICE // Несколько вариантов из списка
+  IMAGE_CHOICE // Выбор картинки (варианты - URLs картинок)
+  RATING     // Шкала оценок (например, от 1 до 5)
+}
