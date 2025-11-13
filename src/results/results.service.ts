@@ -11,12 +11,18 @@ export class ResultsService {
         resultsId: resultId,
       },
       include: {
-        responses: true,
+        responses: {
+          include: {
+            answers: true,
+          },
+        },
       },
     });
 
     if (!pollWithResponses) {
-      throw new NotFoundException(`No one poll find with id: ${resultId}`);
+      throw new NotFoundException(
+        `No one poll results find with id: ${resultId}`,
+      );
     }
 
     return pollWithResponses;
